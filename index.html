@@ -92,7 +92,7 @@ function fmtDur(s){if(!s)return'';const h=Math.floor(s/3600),m=Math.floor((s%360
 function p2(n){return String(n).padStart(2,'0')}
 function fmtV(n){if(!n)return'';if(n>=1e6)return`${(n/1e6).toFixed(1)}M회`;if(n>=1e3)return`${(n/1e3).toFixed(0)}K회`;return`${n}회`}
 function fmtD(u){return u?new Date(u*1000).toLocaleDateString('ko-KR'):''}
-function thumb(id){return`https://inv.nadeko.net/vi/${id}/mqdefault.jpg`}
+function thumb(id){return`https://i.ytimg.com/vi/${id}/mqdefault.jpg`}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function pickStream(arr=[]){for(const q of['720p','480p','360p','240p']){const s=arr.find(f=>f.quality===q);if(s)return s.url;}return arr[0]?.url??null}
 
@@ -109,78 +109,181 @@ function cardHTML(v){
   </div>`;
 }
 
+// ── 무한 스크롤 상태 ──────────────────────────────────
+let _searchQ='', _searchPage=1, _searchLoading=false, _searchDone=false;
+
+function _removeSentinel(){const s=document.getElementById('scroll-sentinel');if(s)s.remove();}
+function _addSentinel(){
+  _removeSentinel();
+  const g=document.getElementById('videoGrid');
+  const s=document.createElement('div');
+  s.id='scroll-sentinel';
+  s.style.cssText='grid-column:1/-1;height:40px';
+  g.appendChild(s);
+  scrollObserver.observe(s);
+}
+const scrollObserver=new IntersectionObserver(entries=>{
+  if(entries[0].isIntersecting&&!_searchLoading&&!_searchDone&&_searchQ)
+    loadSearchPage(_searchQ,++_searchPage);
+},{rootMargin:'200px'});
+
+async function loadSearchPage(q,page){
+  _searchLoading=true;
+  _removeSentinel();
+  const g=document.getElementById('videoGrid');
+  const sp=document.createElement('p');
+  sp.id='page-spinner';sp.className='spinner';
+  sp.style.cssText='grid-column:1/-1;padding:20px';
+  sp.textContent='더 불러오는 중...';
+  g.appendChild(sp);
+  try{
+    const d=await api(`/search?q=${encodeURIComponent(q)}&type=video&sort_by=relevance&page=${page}`);
+    sp.remove();
+    if(!d||!d.length){_searchDone=true;_searchLoading=false;return;}
+    d.forEach(v=>{const div=document.createElement('div');div.innerHTML=cardHTML(v);g.appendChild(div.firstChild);});
+    if(d.length<15)_searchDone=true;
+    else _addSentinel();
+  }catch(e){sp.remove();_searchDone=true;}
+  _searchLoading=false;
+}
+
 async function loadTrending(){
+  _searchQ='';_searchDone=true;
   const g=document.getElementById('videoGrid');
   g.innerHTML=`<p class="spinner" style="grid-column:1/-1">불러오는 중...</p>`;
   try{
-    const d=await api('/trending?region=KR');
-    g.innerHTML=d.map(cardHTML).join('');
+    // 기본 + 음악 + 게임 + 뉴스 카테고리 병렬 로드 → 훨씬 많은 영상
+    const cats=['default','music','gaming','news'];
+    const results=await Promise.allSettled(
+      cats.map(t=>api(`/trending?region=KR${t==='default'?'':`&type=${t}`}`))
+    );
+    const seen=new Set(), all=[];
+    for(const r of results){
+      if(r.status==='fulfilled'&&Array.isArray(r.value)){
+        for(const v of r.value){if(!seen.has(v.videoId)){seen.add(v.videoId);all.push(v);}}
+      }
+    }
+    if(!all.length)throw new Error('빈 응답');
+    g.innerHTML=all.map(cardHTML).join('');
   }catch(e){
-    g.innerHTML=`<p class="error-msg" style="grid-column:1/-1">트렌딩 로드 실패 (${e.message})</p>`;
+    g.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px">
+      <p class="error-msg">트렌딩 로드 실패 (${e.message})</p>
+      <button onclick="loadTrending()" style="margin-top:14px;padding:9px 20px;background:var(--accent);
+        color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.9rem">🔄 다시 시도</button>
+    </div>`;
   }
 }
 
 async function doSearch(q){
+  _searchQ=q;_searchPage=1;_searchLoading=false;_searchDone=false;
   document.getElementById('homeTitle').textContent=`"${q}" 검색 결과`;
   showHome();
   const g=document.getElementById('videoGrid');
   g.innerHTML=`<p class="spinner" style="grid-column:1/-1">검색 중...</p>`;
   try{
-    const d=await api(`/search?q=${encodeURIComponent(q)}&type=video&sort_by=relevance`);
+    const d=await api(`/search?q=${encodeURIComponent(q)}&type=video&sort_by=relevance&page=1`);
+    if(!d||!d.length)throw new Error('결과 없음');
     g.innerHTML=d.map(cardHTML).join('');
+    if(d.length>=15)_addSentinel();
+    else _searchDone=true;
   }catch(e){
-    g.innerHTML=`<p class="error-msg" style="grid-column:1/-1">검색 실패 (${e.message})</p>`;
+    _searchDone=true;
+    g.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px">
+      <p class="error-msg">검색 실패 (${e.message})</p>
+      <button onclick="doSearch(${JSON.stringify(q)})" style="margin-top:14px;padding:9px 20px;background:var(--accent);
+        color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.9rem">🔄 다시 시도</button>
+    </div>`;
   }
 }
 
-// 작동 중인 인스턴스 찾기 (embed용)
-const EMBED_INSTANCES = [
-  'https://inv.nadeko.net',
-  'https://invidious.privacydev.net',
-  'https://yt.cdaut.de',
-  'https://iv.melmac.space',
-];
+// YouTube oEmbed: 제목/채널 폴백용 (항상 동작)
+async function fetchOEmbed(id){
+  const r=await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`,{signal:AbortSignal.timeout(5000)});
+  if(!r.ok)throw new Error('oembed fail');
+  return r.json();
+}
+function renderEmbed(id){
+  return`<div style="position:relative">
+    <iframe class="video-player" id="embedFrame"
+      src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0"
+      allowfullscreen allow="autoplay;fullscreen;picture-in-picture"
+      style="border:none"></iframe>
+    <button id="retryBtn" onclick="retryEmbed('${id}')"
+      style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      padding:10px 22px;background:var(--accent);color:#fff;border:none;border-radius:8px;
+      font-size:1rem;cursor:pointer;z-index:10">▶ 재시도</button>
+  </div>`;
+}
+function retryEmbed(id){
+  const f=document.getElementById('embedFrame');
+  if(f)f.src=`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&_=${Date.now()}`;
+  const b=document.getElementById('retryBtn');
+  if(b)b.style.display='none';
+  // 재시도 후 15초 뒤에도 버튼 다시 표시
+  setTimeout(()=>{const b2=document.getElementById('retryBtn');if(b2)b2.style.display='block';},15000);
+}
+// embed 로드 후 15초 뒤 재시도 버튼 표시 (사용자가 필요하면 누를 수 있게)
+function scheduleRetryBtn(id){
+  setTimeout(()=>{
+    const b=document.getElementById('retryBtn');
+    if(b)b.style.display='block';
+  },15000);
+}
+
 
 async function goWatch(id){
   history.pushState({},'',`?v=${id}`);
   showWatch();
   window.scrollTo(0,0);
 
-  // ★ 1단계: API 기다리지 않고 embed 즉시 표시
-  document.getElementById('playerBox').innerHTML=`
-    <iframe class="video-player"
-      src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0"
-      allowfullscreen allow="autoplay;fullscreen;picture-in-picture"
-      style="border:none"></iframe>
-    <h1 class="video-title" id="vTitle">로딩 중...</h1>
-    <p class="video-meta" id="vMeta"></p>
-    <div class="video-desc" id="vDesc" onclick="this.classList.toggle('open')">설명 로딩 중...</div>`;
+  // 1단계: embed 즉시 표시 + 재시도 버튼 포함
+  document.getElementById('playerBox').innerHTML=
+    renderEmbed(id)+
+    `<h1 class="video-title" id="vTitle">로딩 중...</h1>
+     <p class="video-meta" id="vMeta"></p>
+     <div class="video-desc" id="vDesc" onclick="this.classList.toggle('open')">설명 로딩 중...</div>`;
+  scheduleRetryBtn(id);
 
   document.getElementById('relatedList').innerHTML=`<p class="spinner">불러오는 중...</p>`;
 
-  // ★ 2단계: 메타데이터 백그라운드 로드 (실패해도 영상은 이미 재생 중)
+  // 2단계: Invidious API 시도, 실패 시 oEmbed 폴백
+  let metaOk=false;
   try{
     const v=await api(`/videos/${id}`);
-    document.getElementById('vTitle').textContent=v.title||'';
-    document.getElementById('vMeta').textContent=`${v.author||''} · ${fmtV(v.viewCount)} · ${fmtD(v.published)}`;
-    const desc=document.getElementById('vDesc');
-    if(desc){
-      desc.innerHTML=esc(v.description||'설명 없음').replace(/\n/g,'<br>')+
-        '<br><span style="color:var(--accent);font-size:.78rem">▼ 더 보기</span>';
-    }
+    const el=n=>document.getElementById(n);
+    if(el('vTitle'))el('vTitle').textContent=v.title||'';
+    if(el('vMeta'))el('vMeta').textContent=`${v.author||''} · ${fmtV(v.viewCount)} · ${fmtD(v.published)}`;
+    const desc=el('vDesc');
+    if(desc)desc.innerHTML=esc(v.description||'설명 없음').replace(/\n/g,'<br>')+
+      '<br><span style="color:var(--accent);font-size:.78rem">▼ 더 보기</span>';
     const rel=v.recommendedVideos??[];
-    document.getElementById('relatedList').innerHTML=rel.slice(0,15).map(r=>`
-      <div class="rel-card" onclick="goWatch('${r.videoId}')">
-        <div class="rel-thumb"><img src="${thumb(r.videoId)}" alt="" loading="lazy" onerror="this.style.opacity=0"/></div>
-        <div class="rel-info">
-          <p class="rel-title">${esc(r.title)}</p>
-          <p class="rel-meta">${esc(r.author||'')} · ${fmtDur(r.lengthSeconds)}</p>
-        </div>
-      </div>`).join('');
-  }catch(e){
-    // 메타 실패해도 영상은 재생됨 — 조용히 처리
-    document.getElementById('vTitle').textContent='(제목 로드 실패)';
-    document.getElementById('relatedList').innerHTML='<p class="spinner" style="font-size:.8rem">관련 영상 없음</p>';
+    document.getElementById('relatedList').innerHTML=rel.length
+      ? rel.slice(0,15).map(r=>`
+          <div class="rel-card" onclick="goWatch('${r.videoId}')">
+            <div class="rel-thumb"><img src="${thumb(r.videoId)}" alt="" loading="lazy" onerror="this.style.opacity=0"/></div>
+            <div class="rel-info">
+              <p class="rel-title">${esc(r.title)}</p>
+              <p class="rel-meta">${esc(r.author||'')} · ${fmtDur(r.lengthSeconds)}</p>
+            </div>
+          </div>`).join('')
+      : '<p class="spinner" style="font-size:.8rem">관련 영상 없음</p>';
+    metaOk=true;
+  }catch(_){}
+
+  // 3단계: Invidious 완전 실패 → oEmbed로 제목만이라도
+  if(!metaOk){
+    try{
+      const oe=await fetchOEmbed(id);
+      const t=document.getElementById('vTitle');
+      const d=document.getElementById('vDesc');
+      if(t)t.textContent=oe.title||'';
+      if(d)d.textContent='(상세 정보 없음)';
+    }catch(_){
+      const t=document.getElementById('vTitle');
+      if(t)t.textContent='제목 없음';
+    }
+    document.getElementById('relatedList').innerHTML=
+      `<p class="spinner" style="font-size:.8rem;color:var(--muted)">관련 영상을 불러올 수 없습니다</p>`;
   }
 }
 
