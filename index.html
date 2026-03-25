@@ -133,28 +133,41 @@ async function doSearch(q){
   }
 }
 
+// 작동 중인 인스턴스 찾기 (embed용)
+const EMBED_INSTANCES = [
+  'https://inv.nadeko.net',
+  'https://invidious.privacydev.net',
+  'https://yt.cdaut.de',
+  'https://iv.melmac.space',
+];
+
 async function goWatch(id){
   history.pushState({},'',`?v=${id}`);
   showWatch();
-  document.getElementById('playerBox').innerHTML=`<p class="spinner">로딩 중...</p>`;
-  document.getElementById('relatedList').innerHTML='';
   window.scrollTo(0,0);
+
+  // ★ 1단계: API 기다리지 않고 embed 즉시 표시
+  document.getElementById('playerBox').innerHTML=`
+    <iframe class="video-player"
+      src="https://inv.nadeko.net/embed/${id}?autoplay=1&listen=0"
+      allowfullscreen allow="autoplay;fullscreen;picture-in-picture"
+      style="border:none"></iframe>
+    <h1 class="video-title" id="vTitle">로딩 중...</h1>
+    <p class="video-meta" id="vMeta"></p>
+    <div class="video-desc" id="vDesc" onclick="this.classList.toggle('open')">설명 로딩 중...</div>`;
+
+  document.getElementById('relatedList').innerHTML=`<p class="spinner">불러오는 중...</p>`;
+
+  // ★ 2단계: 메타데이터 백그라운드 로드 (실패해도 영상은 이미 재생 중)
   try{
     const v=await api(`/videos/${id}`);
-    const streamUrl=pickStream(v.formatStreams??[]);
-    let player=streamUrl
-      ?`<video class="video-player" controls autoplay preload="auto" playsinline src="${streamUrl}"></video>`
-      :`<iframe class="video-player" src="https://inv.nadeko.net/embed/${id}?autoplay=1" allowfullscreen allow="autoplay;fullscreen"></iframe>`;
-
-    document.getElementById('playerBox').innerHTML=`
-      ${player}
-      <h1 class="video-title">${esc(v.title)}</h1>
-      <p class="video-meta">${esc(v.author||'')} · ${fmtV(v.viewCount)} · ${fmtD(v.published)}</p>
-      <div class="video-desc" onclick="this.classList.toggle('open')">
-        ${esc(v.description||'설명 없음').replace(/\n/g,'<br>')}
-        <br><span style="color:var(--accent);font-size:.78rem">▼ 더 보기</span>
-      </div>`;
-
+    document.getElementById('vTitle').textContent=v.title||'';
+    document.getElementById('vMeta').textContent=`${v.author||''} · ${fmtV(v.viewCount)} · ${fmtD(v.published)}`;
+    const desc=document.getElementById('vDesc');
+    if(desc){
+      desc.innerHTML=esc(v.description||'설명 없음').replace(/\n/g,'<br>')+
+        '<br><span style="color:var(--accent);font-size:.78rem">▼ 더 보기</span>';
+    }
     const rel=v.recommendedVideos??[];
     document.getElementById('relatedList').innerHTML=rel.slice(0,15).map(r=>`
       <div class="rel-card" onclick="goWatch('${r.videoId}')">
@@ -165,7 +178,9 @@ async function goWatch(id){
         </div>
       </div>`).join('');
   }catch(e){
-    document.getElementById('playerBox').innerHTML=`<p class="error-msg">영상 로드 실패 (${e.message})</p>`;
+    // 메타 실패해도 영상은 재생됨 — 조용히 처리
+    document.getElementById('vTitle').textContent='(제목 로드 실패)';
+    document.getElementById('relatedList').innerHTML='<p class="spinner" style="font-size:.8rem">관련 영상 없음</p>';
   }
 }
 
