@@ -6,46 +6,120 @@
 <title>InvTube</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0f0f0f;--surface:#1a1a1a;--border:#2a2a2a;--accent:#ff4444;--text:#e8e8e8;--muted:#888}
+:root{
+  --bg:#0f0f0f;--surface:#1a1a1a;--surface2:#222;--border:#2a2a2a;
+  --accent:#ff4444;--text:#e8e8e8;--muted:#888;
+}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
-.header{position:sticky;top:0;z-index:100;background:rgba(15,15,15,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:12px 16px}
-.header-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:14px}
-.logo{font-size:1.2rem;font-weight:700;color:var(--accent);cursor:pointer;white-space:nowrap;flex-shrink:0}
-.search-form{display:flex;flex:1;max-width:580px}
-.search-input{flex:1;padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-right:none;border-radius:20px 0 0 20px;color:var(--text);font-size:.95rem;outline:none}
+
+/* ── 헤더 ── */
+.header{position:sticky;top:0;z-index:100;background:rgba(15,15,15,.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:10px 16px}
+.header-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.logo{font-size:1.15rem;font-weight:700;color:var(--accent);cursor:pointer;white-space:nowrap;flex-shrink:0;user-select:none}
+.search-form{display:flex;flex:1;max-width:560px}
+.search-input{flex:1;padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-right:none;border-radius:20px 0 0 20px;color:var(--text);font-size:.93rem;outline:none;transition:border-color .2s}
 .search-input:focus{border-color:var(--accent)}
-.search-btn{padding:8px 16px;background:var(--accent);border:none;border-radius:0 20px 20px 0;color:#fff;cursor:pointer;font-size:1rem}
+.search-btn{padding:8px 16px;background:var(--accent);border:none;border-radius:0 20px 20px 0;color:#fff;cursor:pointer}
+
+/* ── 컨테이너 ── */
 .container{max-width:1280px;margin:0 auto;padding:0 16px}
-.section-title{font-size:1.1rem;font-weight:700;padding:16px 0 8px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;padding:8px 0 24px}
+.section-title{font-size:1.05rem;font-weight:700;padding:14px 0 10px}
+
+/* ── 그리드 ── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;padding:4px 0 32px}
+.ch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;padding:4px 0 32px}
+
+/* ── 영상 카드 ── */
 .card{background:var(--surface);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
-.card:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.5)}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.6)}
 .thumb-wrap{position:relative;aspect-ratio:16/9;overflow:hidden;background:#111}
 .thumb-wrap img{width:100%;height:100%;object-fit:cover;display:block}
-.duration{position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,.85);color:#fff;font-size:.72rem;padding:2px 5px;border-radius:3px}
+.duration{position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,.85);color:#fff;font-size:.72rem;padding:2px 5px;border-radius:3px;font-weight:600}
+.live-badge{position:absolute;top:6px;left:6px;background:#ff0000;color:#fff;font-size:.68rem;padding:2px 6px;border-radius:3px;font-weight:700}
 .card-info{padding:10px 12px 12px}
-.card-title{font-size:.87rem;font-weight:600;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.card-meta{font-size:.77rem;color:var(--muted);margin-top:4px}
-.watch-layout{display:grid;grid-template-columns:1fr 360px;gap:20px;padding:20px 0}
+.card-title{font-size:.86rem;font-weight:600;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:4px}
+.card-meta{font-size:.75rem;color:var(--muted)}
+.card-author{cursor:pointer;display:inline}
+.card-author:hover{color:var(--text);text-decoration:underline}
+
+/* ── 채널 카드 ── */
+.ch-card{background:var(--surface);border-radius:10px;padding:20px 12px;cursor:pointer;transition:transform .15s,box-shadow .15s;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
+.ch-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.6)}
+.ch-avatar{width:72px;height:72px;border-radius:50%;object-fit:cover;background:#222;border:2px solid var(--border)}
+.ch-name{font-size:.88rem;font-weight:700;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ch-subs{font-size:.74rem;color:var(--muted)}
+
+/* ── 검색 탭 ── */
+.search-tabs{display:flex;gap:6px;padding:12px 0 0;margin-bottom:2px}
+.stab{padding:6px 16px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;font-weight:500;transition:all .15s}
+.stab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ── 시청 뷰 ── */
+.watch-layout{display:grid;grid-template-columns:1fr 360px;gap:20px;padding:14px 0 32px}
 @media(max-width:900px){.watch-layout{grid-template-columns:1fr}}
-.video-player{width:100%;aspect-ratio:16/9;background:#000;border-radius:8px;display:block;border:none}
-.video-title{font-size:1.1rem;font-weight:700;margin:12px 0 4px}
-.video-meta{font-size:.83rem;color:var(--muted);margin-bottom:10px}
-.video-desc{font-size:.83rem;color:var(--muted);line-height:1.6;max-height:80px;overflow:hidden;background:var(--surface);padding:10px;border-radius:6px;cursor:pointer;transition:max-height .3s}
-.video-desc.open{max-height:600px}
-.related-title{font-size:1rem;font-weight:600;margin-bottom:12px}
+.video-title-bar{font-size:1.05rem;font-weight:700;line-height:1.45;margin-bottom:10px;min-height:1.5em}
+.video-player-wrap{width:100%;aspect-ratio:16/9;background:#000;border-radius:8px;overflow:hidden}
+.video-player{width:100%;height:100%;border:none;display:block}
+.video-toolbar{display:flex;align-items:center;gap:8px;padding:8px 0;flex-wrap:wrap}
+.btn-sm{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-size:.8rem;display:inline-flex;align-items:center;gap:4px;transition:all .15s;white-space:nowrap}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent)}
+.btn-retry{background:var(--accent);border-color:var(--accent);color:#fff;display:none;animation:pulse .8s infinite alternate}
+.btn-retry.visible{display:inline-flex}
+.btn-retry:hover{opacity:.85}
+@keyframes pulse{from{opacity:1}to{opacity:.7}}
+.ch-link{display:inline-flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;margin-bottom:4px}
+.ch-link:hover .ch-link-name{color:var(--accent)}
+.ch-link-thumb{width:32px;height:32px;border-radius:50%;object-fit:cover;background:#222;flex-shrink:0}
+.ch-link-name{font-size:.88rem;font-weight:600;transition:color .15s}
+.video-meta-row{font-size:.82rem;color:var(--muted);margin-bottom:8px}
+.video-desc{font-size:.82rem;color:var(--muted);line-height:1.6;max-height:72px;overflow:hidden;background:var(--surface);padding:10px 12px;border-radius:6px;cursor:pointer;transition:max-height .35s;margin-top:6px}
+.video-desc.open{max-height:800px}
+.related-hdr{font-size:.95rem;font-weight:700;margin-bottom:10px}
 .related-list{display:flex;flex-direction:column;gap:8px}
-.rel-card{display:flex;gap:10px;cursor:pointer;padding:7px;border-radius:8px;transition:background .15s}
+.rel-card{display:flex;gap:10px;cursor:pointer;padding:6px;border-radius:8px;transition:background .15s}
 .rel-card:hover{background:var(--surface)}
-.rel-thumb{width:136px;flex-shrink:0;border-radius:5px;overflow:hidden;aspect-ratio:16/9;background:#111}
+.rel-thumb{width:130px;flex-shrink:0;border-radius:5px;overflow:hidden;aspect-ratio:16/9;background:#111;position:relative}
 .rel-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.rel-dur{position:absolute;bottom:3px;right:4px;background:rgba(0,0,0,.85);color:#fff;font-size:.67rem;padding:1px 4px;border-radius:2px}
 .rel-info{flex:1;min-width:0}
-.rel-title{font-size:.8rem;font-weight:600;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.rel-meta{font-size:.73rem;color:var(--muted);margin-top:3px}
-.spinner{text-align:center;padding:60px;color:var(--muted)}
-.error-msg{text-align:center;padding:40px;color:var(--accent)}
-#home-view,#watch-view{display:none}
-#home-view.active,#watch-view.active{display:block}
+.rel-title{font-size:.79rem;font-weight:600;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rel-meta{font-size:.72rem;color:var(--muted);margin-top:2px}
+
+/* ── 채널 페이지 ── */
+.ch-banner{width:100%;aspect-ratio:6/1;min-height:80px;object-fit:cover;background:var(--surface2);border-radius:8px;margin-bottom:-44px;display:block}
+.ch-header{display:flex;align-items:flex-end;gap:14px;padding:0 8px 16px;border-bottom:1px solid var(--border);margin-bottom:14px}
+.ch-header-av{width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--bg);flex-shrink:0;background:#222;position:relative;z-index:1}
+.ch-header-info{flex:1;min-width:0;padding-bottom:4px}
+.ch-header-name{font-size:1.25rem;font-weight:700;margin-bottom:3px}
+.ch-header-sub{font-size:.84rem;color:var(--muted)}
+.ch-desc-box{background:var(--surface);padding:12px;border-radius:8px;font-size:.83rem;color:var(--muted);line-height:1.6;max-height:80px;overflow:hidden;cursor:pointer;margin-bottom:14px;transition:max-height .3s}
+.ch-desc-box.open{max-height:600px}
+
+/* ── 뒤로가기 ── */
+.back-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 0 10px;cursor:pointer;color:var(--muted);font-size:.88rem;background:none;border:none;transition:color .15s}
+.back-btn:hover{color:var(--text)}
+
+/* ── 공통 ── */
+.spinner{text-align:center;padding:50px 20px;color:var(--muted);font-size:.9rem}
+.err-box{text-align:center;padding:40px 20px}
+.err-msg{color:var(--accent);font-size:.9rem;margin-bottom:12px}
+.btn-retry-load{padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.88rem}
+.btn-retry-load:hover{opacity:.85}
+
+/* ── 스켈레톤 ── */
+@keyframes shimmer{0%{background-position:-600px 0}100%{background-position:600px 0}}
+.skeleton{background:linear-gradient(90deg,#1a1a1a 25%,#252525 50%,#1a1a1a 75%);background-size:1200px 100%;animation:shimmer 1.5s infinite linear}
+.skel-card{border-radius:10px;overflow:hidden;background:var(--surface)}
+.skel-thumb{aspect-ratio:16/9;width:100%}
+.skel-line{border-radius:4px;margin:8px 12px}
+
+#home-view,#watch-view,#channel-view{display:none}
+#home-view.active,#watch-view.active,#channel-view.active{display:block}
+
+@media(max-width:600px){
+  .grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
+  .ch-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+}
 </style>
 </head>
 <body>
@@ -54,262 +128,513 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="header-inner">
     <span class="logo" id="logoBtn">▶ InvTube</span>
     <form class="search-form" id="searchForm">
-      <input class="search-input" id="searchInput" placeholder="영상 검색..."/>
+      <input class="search-input" id="searchInput" placeholder="영상·채널 검색..."/>
       <button class="search-btn" type="submit">🔍</button>
     </form>
   </div>
 </header>
 
 <main class="container">
+
+  <!-- 홈 뷰 -->
   <div id="home-view" class="active">
     <p class="section-title" id="homeTitle">🔥 트렌딩</p>
-    <div class="grid" id="videoGrid"></div>
+    <div id="videoGrid"></div>
   </div>
+
+  <!-- 시청 뷰 -->
   <div id="watch-view">
     <div class="watch-layout">
-      <div id="playerBox"></div>
+      <div>
+        <button class="back-btn" id="watchBackBtn">← 뒤로가기</button>
+        <div id="playerBox"></div>
+      </div>
       <aside>
-        <p class="related-title">관련 영상</p>
+        <p class="related-hdr">관련 영상</p>
         <div class="related-list" id="relatedList"></div>
       </aside>
     </div>
   </div>
+
+  <!-- 채널 뷰 -->
+  <div id="channel-view">
+    <button class="back-btn" id="chBackBtn">← 뒤로가기</button>
+    <div id="channelBox"></div>
+  </div>
+
 </main>
 
 <script>
-// ★ 핵심: 직접 API 대신 /api/proxy 경유 → CORS 없음
-async function api(path) {
+/* ════════════════════════════════
+   API + LRU 캐시
+════════════════════════════════ */
+const _cache = new Map();
+async function api(path, noCache=false) {
+  if (!noCache && _cache.has(path)) return _cache.get(path);
   const ctrl = new AbortController();
-  const tid = setTimeout(() => ctrl.abort(), 12000);
+  const tid = setTimeout(() => ctrl.abort(), 14000);
   try {
-    const r = await fetch(`/api/proxy?path=${encodeURIComponent(path)}`, { signal: ctrl.signal });
-    if (!r.ok) throw new Error(`${r.status}`);
-    return r.json();
+    const r = await fetch(`/api/proxy?path=${encodeURIComponent(path)}`, {signal: ctrl.signal});
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    if (!noCache) {
+      _cache.set(path, d);
+      if (_cache.size > 100) _cache.delete(_cache.keys().next().value);
+    }
+    return d;
   } finally { clearTimeout(tid); }
 }
 
-function fmtDur(s){if(!s)return'';const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60;return h?`${h}:${p2(m)}:${p2(sc)}`:`${m}:${p2(sc)}`}
-function p2(n){return String(n).padStart(2,'0')}
-function fmtV(n){if(!n)return'';if(n>=1e6)return`${(n/1e6).toFixed(1)}M회`;if(n>=1e3)return`${(n/1e3).toFixed(0)}K회`;return`${n}회`}
-function fmtD(u){return u?new Date(u*1000).toLocaleDateString('ko-KR'):''}
-function thumb(id){return`https://i.ytimg.com/vi/${id}/mqdefault.jpg`}
-function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-function pickStream(arr=[]){for(const q of['720p','480p','360p','240p']){const s=arr.find(f=>f.quality===q);if(s)return s.url;}return arr[0]?.url??null}
-
-function cardHTML(v){
-  return`<div class="card" onclick="goWatch('${v.videoId}')">
-    <div class="thumb-wrap">
-      <img src="${thumb(v.videoId)}" alt="" loading="lazy" onerror="this.style.opacity=0"/>
-      ${v.lengthSeconds?`<span class="duration">${fmtDur(v.lengthSeconds)}</span>`:''}
-    </div>
-    <div class="card-info">
-      <p class="card-title">${esc(v.title)}</p>
-      <p class="card-meta">${esc(v.author||'')} · ${fmtV(v.viewCount)}</p>
-    </div>
-  </div>`;
-}
-
-// ── 무한 스크롤 상태 ──────────────────────────────────
-let _searchQ='', _searchPage=1, _searchLoading=false, _searchDone=false;
-
-function _removeSentinel(){const s=document.getElementById('scroll-sentinel');if(s)s.remove();}
-function _addSentinel(){
-  _removeSentinel();
-  const g=document.getElementById('videoGrid');
-  const s=document.createElement('div');
-  s.id='scroll-sentinel';
-  s.style.cssText='grid-column:1/-1;height:40px';
-  g.appendChild(s);
-  scrollObserver.observe(s);
-}
-const scrollObserver=new IntersectionObserver(entries=>{
-  if(entries[0].isIntersecting&&!_searchLoading&&!_searchDone&&_searchQ)
-    loadSearchPage(_searchQ,++_searchPage);
-},{rootMargin:'200px'});
-
-async function loadSearchPage(q,page){
-  _searchLoading=true;
-  _removeSentinel();
-  const g=document.getElementById('videoGrid');
-  const sp=document.createElement('p');
-  sp.id='page-spinner';sp.className='spinner';
-  sp.style.cssText='grid-column:1/-1;padding:20px';
-  sp.textContent='더 불러오는 중...';
-  g.appendChild(sp);
-  try{
-    const d=await api(`/search?q=${encodeURIComponent(q)}&type=video&sort_by=relevance&page=${page}`);
-    sp.remove();
-    if(!d||!d.length){_searchDone=true;_searchLoading=false;return;}
-    d.forEach(v=>{const div=document.createElement('div');div.innerHTML=cardHTML(v);g.appendChild(div.firstChild);});
-    if(d.length<15)_searchDone=true;
-    else _addSentinel();
-  }catch(e){sp.remove();_searchDone=true;}
-  _searchLoading=false;
-}
-
-async function loadTrending(){
-  _searchQ='';_searchDone=true;
-  const g=document.getElementById('videoGrid');
-  g.innerHTML=`<p class="spinner" style="grid-column:1/-1">불러오는 중...</p>`;
-  try{
-    // 기본 + 음악 + 게임 + 뉴스 카테고리 병렬 로드 → 훨씬 많은 영상
-    const cats=['default','music','gaming','news'];
-    const results=await Promise.allSettled(
-      cats.map(t=>api(`/trending?region=KR${t==='default'?'':`&type=${t}`}`))
-    );
-    const seen=new Set(), all=[];
-    for(const r of results){
-      if(r.status==='fulfilled'&&Array.isArray(r.value)){
-        for(const v of r.value){if(!seen.has(v.videoId)){seen.add(v.videoId);all.push(v);}}
-      }
-    }
-    if(!all.length)throw new Error('빈 응답');
-    g.innerHTML=all.map(cardHTML).join('');
-  }catch(e){
-    g.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px">
-      <p class="error-msg">트렌딩 로드 실패 (${e.message})</p>
-      <button onclick="loadTrending()" style="margin-top:14px;padding:9px 20px;background:var(--accent);
-        color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.9rem">🔄 다시 시도</button>
-    </div>`;
-  }
-}
-
-async function doSearch(q){
-  _searchQ=q;_searchPage=1;_searchLoading=false;_searchDone=false;
-  document.getElementById('homeTitle').textContent=`"${q}" 검색 결과`;
-  showHome();
-  const g=document.getElementById('videoGrid');
-  g.innerHTML=`<p class="spinner" style="grid-column:1/-1">검색 중...</p>`;
-  try{
-    const d=await api(`/search?q=${encodeURIComponent(q)}&type=video&sort_by=relevance&page=1`);
-    if(!d||!d.length)throw new Error('결과 없음');
-    g.innerHTML=d.map(cardHTML).join('');
-    if(d.length>=15)_addSentinel();
-    else _searchDone=true;
-  }catch(e){
-    _searchDone=true;
-    g.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px">
-      <p class="error-msg">검색 실패 (${e.message})</p>
-      <button onclick="doSearch(${JSON.stringify(q)})" style="margin-top:14px;padding:9px 20px;background:var(--accent);
-        color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.9rem">🔄 다시 시도</button>
-    </div>`;
-  }
-}
-
-// YouTube oEmbed: 제목/채널 폴백용 (항상 동작)
-async function fetchOEmbed(id){
-  const r=await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`,{signal:AbortSignal.timeout(5000)});
-  if(!r.ok)throw new Error('oembed fail');
+async function oEmbed(id) {
+  const r = await fetch(
+    `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`,
+    {signal: AbortSignal.timeout(5000)}
+  );
+  if (!r.ok) throw new Error('oembed');
   return r.json();
 }
-function renderEmbed(id){
-  return`<div style="position:relative">
-    <iframe class="video-player" id="embedFrame"
-      src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0"
-      allowfullscreen allow="autoplay;fullscreen;picture-in-picture"
-      style="border:none"></iframe>
-    <button id="retryBtn" onclick="retryEmbed('${id}')"
-      style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-      padding:10px 22px;background:var(--accent);color:#fff;border:none;border-radius:8px;
-      font-size:1rem;cursor:pointer;z-index:10">▶ 재시도</button>
+
+/* ════════════════════════════════
+   유틸리티
+════════════════════════════════ */
+const p2 = n => String(n).padStart(2,'0');
+function fmtDur(s) {
+  if (!s) return '';
+  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sc=s%60;
+  return h ? `${h}:${p2(m)}:${p2(sc)}` : `${m}:${p2(sc)}`;
+}
+function fmtV(n) {
+  if (n == null) return '';
+  if (n >= 1e8) return `${(n/1e8).toFixed(1)}억회`;
+  if (n >= 1e4) return `${(n/1e4).toFixed(1)}만회`;
+  if (n >= 1e3) return `${(n/1e3).toFixed(0)}K회`;
+  return `${n}회`;
+}
+function fmtSub(n) {
+  if (n == null) return '';
+  if (n >= 1e8) return `구독자 ${(n/1e8).toFixed(1)}억명`;
+  if (n >= 1e4) return `구독자 ${(n/1e4).toFixed(0)}만명`;
+  if (n >= 1e3) return `구독자 ${(n/1e3).toFixed(0)}K명`;
+  return `구독자 ${n}명`;
+}
+function fmtD(u) { return u ? new Date(u*1000).toLocaleDateString('ko-KR') : ''; }
+function thumb(id) { return `https://i.ytimg.com/vi/${id}/mqdefault.jpg`; }
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function bestThumb(arr) {
+  if (!arr || !arr.length) return '';
+  return arr.slice().sort((a,b) => (b.width||0)-(a.width||0))[0]?.url || '';
+}
+function skeletonGrid(n=12) {
+  return `<div class="grid">${Array.from({length:n},()=>`
+    <div class="skel-card">
+      <div class="skel-thumb skeleton"></div>
+      <div class="skel-line skeleton" style="height:13px;width:80%;margin-top:10px"></div>
+      <div class="skel-line skeleton" style="height:11px;width:50%;margin-bottom:10px"></div>
+    </div>`).join('')}</div>`;
+}
+
+/* ════════════════════════════════
+   카드 렌더러
+════════════════════════════════ */
+function cardHTML(v) {
+  if (!v || !v.videoId) return '';
+  const live = v.liveNow || v.lengthSeconds === 0;
+  const badge = live
+    ? '<span class="live-badge">LIVE</span>'
+    : (v.lengthSeconds ? `<span class="duration">${fmtDur(v.lengthSeconds)}</span>` : '');
+  const aid = esc(v.authorId || '');
+  const auth = esc(v.author || '');
+  return `<div class="card" onclick="goWatch('${esc(v.videoId)}')">
+    <div class="thumb-wrap">
+      <img src="${thumb(v.videoId)}" alt="" loading="lazy" onerror="this.style.opacity=.1"/>
+      ${badge}
+    </div>
+    <div class="card-info">
+      <p class="card-title">${esc(v.title||'')}</p>
+      <p class="card-meta">
+        ${aid ? `<span class="card-author" onclick="event.stopPropagation();goChannel('${aid}','${auth}')">${auth}</span>` : auth}
+        ${v.viewCount ? ` · ${fmtV(v.viewCount)}` : ''}
+      </p>
+    </div>
   </div>`;
 }
-function retryEmbed(id){
-  const f=document.getElementById('embedFrame');
-  if(f)f.src=`https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&_=${Date.now()}`;
-  const b=document.getElementById('retryBtn');
-  if(b)b.style.display='none';
-  // 재시도 후 15초 뒤에도 버튼 다시 표시
-  setTimeout(()=>{const b2=document.getElementById('retryBtn');if(b2)b2.style.display='block';},15000);
-}
-// embed 로드 후 15초 뒤 재시도 버튼 표시 (사용자가 필요하면 누를 수 있게)
-function scheduleRetryBtn(id){
-  setTimeout(()=>{
-    const b=document.getElementById('retryBtn');
-    if(b)b.style.display='block';
-  },15000);
+
+function chCardHTML(c) {
+  if (!c) return '';
+  const av = bestThumb(c.authorThumbnails) || c.thumbnail || '';
+  const id = esc(c.authorId || c.channelHandle || '');
+  const name = esc(c.author || c.channelName || '');
+  const subs = fmtSub(c.subCount || c.subscriberCount);
+  return `<div class="ch-card" onclick="goChannel('${id}','${name}')">
+    <img class="ch-avatar" src="${esc(av)}" alt="" loading="lazy" onerror="this.style.opacity=.2"/>
+    <p class="ch-name">${name}</p>
+    ${subs ? `<p class="ch-subs">${subs}</p>` : ''}
+  </div>`;
 }
 
+/* ════════════════════════════════
+   무한 스크롤 (검색)
+════════════════════════════════ */
+let _q='', _sPage=1, _sLoading=false, _sDone=false, _sMode='video';
 
-async function goWatch(id){
-  history.pushState({},'',`?v=${id}`);
-  showWatch();
-  window.scrollTo(0,0);
+function _rmSentinel() {
+  document.getElementById('__s')?.remove();
+}
+function _addSentinel() {
+  _rmSentinel();
+  const g = document.getElementById('videoGrid').querySelector('.grid');
+  if (!g) return;
+  const el = document.createElement('div');
+  el.id='__s'; el.style.cssText='height:2px;grid-column:1/-1';
+  g.appendChild(el);
+  _sObs.observe(el);
+}
+const _sObs = new IntersectionObserver(entries => {
+  if (entries[0].isIntersecting && !_sLoading && !_sDone && _q) _sLoadMore();
+}, {rootMargin:'400px'});
 
-  // 1단계: embed 즉시 표시 + 재시도 버튼 포함
-  document.getElementById('playerBox').innerHTML=
-    renderEmbed(id)+
-    `<h1 class="video-title" id="vTitle">로딩 중...</h1>
-     <p class="video-meta" id="vMeta"></p>
-     <div class="video-desc" id="vDesc" onclick="this.classList.toggle('open')">설명 로딩 중...</div>`;
-  scheduleRetryBtn(id);
+async function _sLoadMore() {
+  if (_sLoading || _sDone) return;
+  _sLoading = true;
+  _rmSentinel();
+  const g = document.getElementById('videoGrid').querySelector('.grid');
+  if (!g) { _sLoading=false; return; }
+  const sp = document.createElement('p');
+  sp.id='__ssp'; sp.className='spinner';
+  sp.style.cssText='grid-column:1/-1;padding:14px';
+  sp.textContent='더 불러오는 중...'; g.appendChild(sp);
+  try {
+    const d = await api(`/search?q=${encodeURIComponent(_q)}&type=${_sMode}&sort_by=relevance&page=${++_sPage}`, true);
+    sp.remove();
+    if (!Array.isArray(d) || !d.length) { _sDone=true; _sLoading=false; return; }
+    d.forEach(item => {
+      const div = document.createElement('div');
+      div.innerHTML = _sMode==='channel' ? chCardHTML(item) : cardHTML(item);
+      if (div.firstChild) g.appendChild(div.firstChild);
+    });
+    if (d.length < 15) _sDone=true; else _addSentinel();
+  } catch(_) { sp.remove(); _sDone=true; }
+  _sLoading = false;
+}
 
-  document.getElementById('relatedList').innerHTML=`<p class="spinner">불러오는 중...</p>`;
-
-  // 2단계: Invidious API 시도, 실패 시 oEmbed 폴백
-  let metaOk=false;
-  try{
-    const v=await api(`/videos/${id}`);
-    const el=n=>document.getElementById(n);
-    if(el('vTitle'))el('vTitle').textContent=v.title||'';
-    if(el('vMeta'))el('vMeta').textContent=`${v.author||''} · ${fmtV(v.viewCount)} · ${fmtD(v.published)}`;
-    const desc=el('vDesc');
-    if(desc)desc.innerHTML=esc(v.description||'설명 없음').replace(/\n/g,'<br>')+
-      '<br><span style="color:var(--accent);font-size:.78rem">▼ 더 보기</span>';
-    const rel=v.recommendedVideos??[];
-    document.getElementById('relatedList').innerHTML=rel.length
-      ? rel.slice(0,15).map(r=>`
-          <div class="rel-card" onclick="goWatch('${r.videoId}')">
-            <div class="rel-thumb"><img src="${thumb(r.videoId)}" alt="" loading="lazy" onerror="this.style.opacity=0"/></div>
-            <div class="rel-info">
-              <p class="rel-title">${esc(r.title)}</p>
-              <p class="rel-meta">${esc(r.author||'')} · ${fmtDur(r.lengthSeconds)}</p>
-            </div>
-          </div>`).join('')
-      : '<p class="spinner" style="font-size:.8rem">관련 영상 없음</p>';
-    metaOk=true;
-  }catch(_){}
-
-  // 3단계: Invidious 완전 실패 → oEmbed로 제목만이라도
-  if(!metaOk){
-    try{
-      const oe=await fetchOEmbed(id);
-      const t=document.getElementById('vTitle');
-      const d=document.getElementById('vDesc');
-      if(t)t.textContent=oe.title||'';
-      if(d)d.textContent='(상세 정보 없음)';
-    }catch(_){
-      const t=document.getElementById('vTitle');
-      if(t)t.textContent='제목 없음';
+/* ════════════════════════════════
+   홈 — 트렌딩
+════════════════════════════════ */
+async function loadTrending() {
+  _q=''; _sDone=true;
+  setView('home');
+  document.getElementById('homeTitle').textContent='🔥 트렌딩';
+  const wrap = document.getElementById('videoGrid');
+  wrap.innerHTML = skeletonGrid(16);
+  try {
+    // 5개 카테고리 병렬 → 최대 100개
+    const cats = ['', 'music', 'gaming', 'news', 'movies'];
+    const results = await Promise.allSettled(
+      cats.map(t => api(`/trending?region=KR${t?`&type=${t}`:''}`, true))
+    );
+    const seen = new Set(), all = [];
+    for (const r of results) {
+      if (r.status==='fulfilled' && Array.isArray(r.value)) {
+        for (const v of r.value) {
+          if (v.videoId && !seen.has(v.videoId)) { seen.add(v.videoId); all.push(v); }
+        }
+      }
     }
-    document.getElementById('relatedList').innerHTML=
-      `<p class="spinner" style="font-size:.8rem;color:var(--muted)">관련 영상을 불러올 수 없습니다</p>`;
+    if (!all.length) throw new Error('빈 응답');
+    wrap.innerHTML = `<div class="grid">${all.map(cardHTML).join('')}</div>`;
+  } catch(e) {
+    wrap.innerHTML = `<div class="err-box">
+      <p class="err-msg">트렌딩 로드 실패</p>
+      <button class="btn-retry-load" onclick="loadTrending()">🔄 다시 시도</button>
+    </div>`;
   }
 }
 
-function showHome(){document.getElementById('home-view').classList.add('active');document.getElementById('watch-view').classList.remove('active')}
-function showWatch(){document.getElementById('home-view').classList.remove('active');document.getElementById('watch-view').classList.add('active')}
+/* ════════════════════════════════
+   검색
+════════════════════════════════ */
+function doSearch(q, tab='video') {
+  if (!q) return;
+  _q=q; _sPage=1; _sLoading=false; _sDone=false; _sMode=tab;
+  document.getElementById('searchInput').value = q;
+  setView('home');
 
-document.getElementById('logoBtn').onclick=()=>{
-  document.getElementById('homeTitle').textContent='🔥 트렌딩';
-  document.getElementById('searchInput').value='';
-  history.pushState({},'','/');
-  loadTrending(); showHome();
+  const tabs = `<div class="search-tabs">
+    <button class="stab${tab==='video'?' active':''}" onclick="doSearch('${esc(q)}','video')">🎬 영상</button>
+    <button class="stab${tab==='channel'?' active':''}" onclick="doSearch('${esc(q)}','channel')">👤 채널</button>
+  </div>`;
+  document.getElementById('homeTitle').innerHTML = `"${esc(q)}" 검색결과${tabs}`;
+
+  const wrap = document.getElementById('videoGrid');
+  wrap.innerHTML = skeletonGrid(tab==='channel' ? 8 : 16);
+
+  api(`/search?q=${encodeURIComponent(q)}&type=${tab}&sort_by=relevance&page=1`, true)
+    .then(d => {
+      if (!Array.isArray(d) || !d.length) {
+        wrap.innerHTML = '<p class="spinner">검색 결과 없음</p>'; return;
+      }
+      const cls = tab==='channel' ? 'ch-grid' : 'grid';
+      wrap.innerHTML = `<div class="${cls}">${d.map(tab==='channel'?chCardHTML:cardHTML).join('')}</div>`;
+      if (d.length >= 15) _addSentinel(); else _sDone=true;
+    })
+    .catch(() => {
+      wrap.innerHTML = `<div class="err-box">
+        <p class="err-msg">검색 실패</p>
+        <button class="btn-retry-load" onclick="doSearch('${esc(q)}','${tab}')">🔄 다시 시도</button>
+      </div>`;
+    });
+}
+
+/* ════════════════════════════════
+   영상 재생 + 재생 실패 감지
+════════════════════════════════ */
+let _detectTimer=null, _detected=false, _msgHandler=null;
+
+function _clearDetect() {
+  clearTimeout(_detectTimer);
+  if (_msgHandler) { window.removeEventListener('message', _msgHandler); _msgHandler=null; }
+}
+
+function _showRetry() { document.getElementById('retryBtnEl')?.classList.add('visible'); }
+function _hideRetry() { document.getElementById('retryBtnEl')?.classList.remove('visible'); }
+
+function _startDetect(id) {
+  _detected=false;
+  _clearDetect();
+  // postMessage로 YouTube 재생 상태 수신
+  _msgHandler = e => {
+    try {
+      const d = typeof e.data==='string' ? JSON.parse(e.data) : e.data;
+      if (!d || d.event !== 'infoDelivery' || !d.info) return;
+      const ps = d.info.playerState;
+      if (ps===1 || ps===3) { // 1=재생중, 3=버퍼링 → 정상
+        _detected=true; _clearDetect(); _hideRetry();
+      }
+    } catch(_) {}
+  };
+  window.addEventListener('message', _msgHandler);
+  // 4초 후에도 감지 못하면 버튼 표시
+  _detectTimer = setTimeout(() => { if (!_detected) _showRetry(); }, 4000);
+}
+
+function retryEmbed(id) {
+  _hideRetry(); _detected=false; clearTimeout(_detectTimer);
+  const f = document.getElementById('embedFrame');
+  if (f) f.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&enablejsapi=1&_=${Date.now()}`;
+  _detectTimer = setTimeout(() => { if (!_detected) _showRetry(); }, 5000);
+}
+
+async function goWatch(id) {
+  if (!id) return;
+  history.pushState({view:'watch', id}, '', `?v=${id}`);
+  _clearDetect();
+  setView('watch');
+  window.scrollTo(0, 0);
+  document.title = 'InvTube';
+
+  const box = document.getElementById('playerBox');
+  const relList = document.getElementById('relatedList');
+
+  // 1. 즉시 골격 표시 — 제목은 위에, 재시도 버튼은 하단 툴바
+  box.innerHTML = `
+    <p class="video-title-bar" id="vTitle">로딩 중...</p>
+    <div class="video-player-wrap">
+      <iframe class="video-player" id="embedFrame"
+        src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&enablejsapi=1"
+        allowfullscreen allow="autoplay;fullscreen;picture-in-picture"></iframe>
+    </div>
+    <div class="video-toolbar">
+      <button class="btn-sm btn-retry" id="retryBtnEl" onclick="retryEmbed('${id}')">🔄 재생 실패 — 새로고침</button>
+      <button class="btn-sm" onclick="navigator.clipboard?.writeText(location.href);this.textContent='✅ 복사됨';setTimeout(()=>this.textContent='🔗 링크 복사',1500)">🔗 링크 복사</button>
+    </div>
+    <div id="chLink" style="display:none" class="ch-link"></div>
+    <p class="video-meta-row" id="vMeta"></p>
+    <div class="video-desc" id="vDesc" onclick="this.classList.toggle('open')">설명 로딩 중...</div>`;
+
+  relList.innerHTML = '<p class="spinner" style="padding:20px">로딩 중...</p>';
+
+  // 2. 재생 실패 감지 시작
+  _startDetect(id);
+
+  // 3. oEmbed로 제목 즉시 표시 (빠름·항상 동작)
+  oEmbed(id).then(oe => {
+    const t = document.getElementById('vTitle');
+    if (t && t.textContent === '로딩 중...') t.textContent = oe.title || '';
+    if (!document.title || document.title==='InvTube') document.title = (oe.title||'') + ' - InvTube';
+  }).catch(() => {});
+
+  // 4. Invidious API로 풀 메타데이터
+  try {
+    const v = await api(`/videos/${id}`);
+    const $ = id => document.getElementById(id);
+
+    if ($('vTitle')) { $('vTitle').textContent = v.title || ''; document.title = (v.title||'') + ' - InvTube'; }
+
+    // 채널 링크 (클릭 시 채널 페이지)
+    if (v.authorId && $('chLink')) {
+      const av = bestThumb(v.authorThumbnails);
+      $('chLink').style.display = 'inline-flex';
+      $('chLink').innerHTML = `
+        ${av ? `<img class="ch-link-thumb" src="${esc(av)}" alt="" onerror="this.style.opacity=.2"/>` : ''}
+        <span class="ch-link-name" onclick="goChannel('${esc(v.authorId)}','${esc(v.author||'')}')">${esc(v.author||'')}</span>`;
+    }
+
+    if ($('vMeta')) $('vMeta').textContent = `${fmtV(v.viewCount)} · ${fmtD(v.published)}`;
+    if ($('vDesc')) {
+      $('vDesc').innerHTML = esc(v.description||'설명 없음').replace(/\n/g,'<br>') +
+        '<br><span style="color:var(--accent);font-size:.75rem;margin-top:4px;display:inline-block">▼ 더 보기</span>';
+    }
+
+    const recs = v.recommendedVideos || [];
+    relList.innerHTML = recs.length
+      ? recs.slice(0,20).map(r => `
+          <div class="rel-card" onclick="goWatch('${esc(r.videoId)}')">
+            <div class="rel-thumb">
+              <img src="${thumb(r.videoId)}" alt="" loading="lazy" onerror="this.style.opacity=.1"/>
+              ${r.lengthSeconds ? `<span class="rel-dur">${fmtDur(r.lengthSeconds)}</span>` : ''}
+            </div>
+            <div class="rel-info">
+              <p class="rel-title">${esc(r.title||'')}</p>
+              <p class="rel-meta">${esc(r.author||'')}${r.viewCount?` · ${fmtV(r.viewCount)}`:''}</p>
+            </div>
+          </div>`).join('')
+      : '<p class="spinner" style="font-size:.82rem;padding:10px">관련 영상 없음</p>';
+  } catch(_) {
+    // Invidious 실패해도 oEmbed 제목은 이미 표시됨
+    const d = document.getElementById('vDesc');
+    if (d) d.textContent = '상세 정보를 불러올 수 없습니다.';
+    relList.innerHTML = '<p class="spinner" style="font-size:.82rem;padding:10px;color:var(--muted)">관련 영상 없음</p>';
+  }
+}
+
+/* ════════════════════════════════
+   채널 페이지 + 채널 영상 무한스크롤
+════════════════════════════════ */
+let _chId='', _chPage=1, _chLoading=false, _chDone=false;
+let _chObs = new IntersectionObserver(e => {
+  if (e[0].isIntersecting && !_chLoading && !_chDone && _chId) _chLoadMore();
+}, {rootMargin:'400px'});
+
+function _chSentinel() {
+  document.getElementById('__ch')?.remove();
+  const g = document.getElementById('chGrid'); if (!g) return;
+  const el = document.createElement('div'); el.id='__ch'; el.style.cssText='height:2px;grid-column:1/-1';
+  g.appendChild(el); _chObs.observe(el);
+}
+
+async function _chLoadMore() {
+  if (_chLoading || _chDone) return;
+  _chLoading=true;
+  document.getElementById('__ch')?.remove();
+  const g = document.getElementById('chGrid'); if (!g){_chLoading=false;return;}
+  const sp = document.createElement('p'); sp.className='spinner';
+  sp.style.cssText='grid-column:1/-1;padding:14px'; sp.textContent='더 불러오는 중...'; g.appendChild(sp);
+  const page = ++_chPage;
+  try {
+    const d = await api(`/channels/${encodeURIComponent(_chId)}/videos?page=${page}`, true);
+    sp.remove();
+    const vids = Array.isArray(d) ? d : (d?.videos || []);
+    if (!vids.length) { _chDone=true; _chLoading=false; return; }
+    vids.forEach(v => { const div=document.createElement('div'); div.innerHTML=cardHTML(v); if(div.firstChild) g.appendChild(div.firstChild); });
+    if (vids.length < 20) _chDone=true; else _chSentinel();
+  } catch(_) { sp.remove(); _chDone=true; }
+  _chLoading=false;
+}
+
+async function goChannel(channelId, channelName='') {
+  if (!channelId) return;
+  _chId=channelId; _chPage=1; _chLoading=false; _chDone=false;
+  history.pushState({view:'channel', id:channelId, name:channelName}, '', `?c=${channelId}`);
+  setView('channel');
+  window.scrollTo(0, 0);
+  document.title = (channelName||'채널') + ' - InvTube';
+
+  const box = document.getElementById('channelBox');
+  box.innerHTML = '<p class="spinner">채널 불러오는 중...</p>';
+
+  try {
+    const [ch, vData] = await Promise.all([
+      api(`/channels/${encodeURIComponent(channelId)}`).catch(() => null),
+      api(`/channels/${encodeURIComponent(channelId)}/videos?page=1`, true).catch(() => ({videos:[]}))
+    ]);
+    const vids = Array.isArray(vData) ? vData : (vData?.videos || []);
+    const banner = ch?.authorBanners?.slice().sort((a,b) => (b.width||0)-(a.width||0))[0]?.url || '';
+    const avatar = bestThumb(ch?.authorThumbnails) || '';
+    const name = ch?.author || channelName || '채널';
+    const subs = fmtSub(ch?.subCount || ch?.subscriberCount);
+    const desc = ch?.description || '';
+    document.title = name + ' - InvTube';
+
+    box.innerHTML = `
+      ${banner ? `<img class="ch-banner" src="${esc(banner)}" alt="" onerror="this.style.display='none'"/>` : '<div class="ch-banner"></div>'}
+      <div class="ch-header">
+        ${avatar ? `<img class="ch-header-av" src="${esc(avatar)}" alt="" onerror="this.style.opacity=.2"/>` : ''}
+        <div class="ch-header-info">
+          <p class="ch-header-name">${esc(name)}</p>
+          ${subs ? `<p class="ch-header-sub">${subs}</p>` : ''}
+        </div>
+      </div>
+      ${desc ? `<div class="ch-desc-box" onclick="this.classList.toggle('open')">${esc(desc).replace(/\n/g,'<br>')}
+        <br><span style="color:var(--accent);font-size:.75rem">▼ 더 보기</span></div>` : ''}
+      <p class="section-title">📹 업로드 영상</p>
+      <div class="grid" id="chGrid">
+        ${vids.map(cardHTML).join('')}
+        ${!vids.length ? '<p class="spinner" style="grid-column:1/-1">영상 없음</p>' : ''}
+      </div>`;
+
+    if (vids.length >= 20) _chSentinel(); else _chDone=true;
+  } catch(_) {
+    box.innerHTML = `<div class="err-box">
+      <p class="err-msg">채널을 불러올 수 없습니다</p>
+      <button class="btn-retry-load" onclick="goChannel('${esc(channelId)}','${esc(channelName)}')">🔄 다시 시도</button>
+    </div>`;
+  }
+}
+
+/* ════════════════════════════════
+   뷰 전환 + 라우팅
+════════════════════════════════ */
+function setView(v) {
+  document.getElementById('home-view').classList.toggle('active', v==='home');
+  document.getElementById('watch-view').classList.toggle('active', v==='watch');
+  document.getElementById('channel-view').classList.toggle('active', v==='channel');
+  if (v !== 'watch') _clearDetect();
+}
+
+function goBack() {
+  if (history.length > 1) history.back(); else loadTrending();
+}
+
+function route() {
+  const p = new URLSearchParams(location.search);
+  const v = p.get('v'), c = p.get('c'), q = p.get('q');
+  if (v) goWatch(v);
+  else if (c) goChannel(c, history.state?.name || '');
+  else if (q) doSearch(q);
+  else loadTrending();
+}
+
+/* ════════════════════════════════
+   이벤트 바인딩
+════════════════════════════════ */
+document.getElementById('logoBtn').onclick = () => {
+  document.getElementById('searchInput').value = '';
+  history.pushState({view:'home'}, '', '/');
+  loadTrending();
 };
-document.getElementById('searchForm').onsubmit=(e)=>{
+document.getElementById('searchForm').onsubmit = e => {
   e.preventDefault();
-  const q=document.getElementById('searchInput').value.trim();
-  if(q)doSearch(q);
+  const q = document.getElementById('searchInput').value.trim();
+  if (q) { history.pushState({view:'search',q}, '', `?q=${encodeURIComponent(q)}`); doSearch(q); }
 };
-window.addEventListener('popstate',()=>{
-  const p=new URLSearchParams(location.search);
-  const v=p.get('v');
-  if(v)goWatch(v);else{loadTrending();showHome();}
-});
+document.getElementById('watchBackBtn').onclick = goBack;
+document.getElementById('chBackBtn').onclick = goBack;
+window.addEventListener('popstate', () => route());
 
 // 초기 라우팅
-const initV=new URLSearchParams(location.search).get('v');
-if(initV)goWatch(initV);else{loadTrending();showHome();}
+route();
 </script>
 </body>
 </html>
