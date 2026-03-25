@@ -872,15 +872,16 @@ async function _sLoadMore() {
 let _activeCat = 'home';
 
 // 카테고리별 설정
+// trendingTypes: Invidious trending?type= 시도, 빈 배열이면 searchFallback으로 자동 폴백
 const CAT_CONFIG = {
-  home:     { title:'🔥 트렌딩',  trendingTypes:['','music','gaming','news','movies'], searchQ:null },
-  shorts:   { title:'📱 Shorts',   trendingTypes:null, searchQ:'shorts' },
-  trending: { title:'🔥 트렌딩 전체', trendingTypes:['','music','gaming','news','movies','sports'], searchQ:null },
-  live:     { title:'🔴 라이브',   trendingTypes:null, searchQ:'한국 live 생방송' },
-  music:    { title:'🎵 음악',     trendingTypes:['music'], searchQ:null },
-  gaming:   { title:'🎮 게임',     trendingTypes:['gaming'], searchQ:null },
-  news:     { title:'📰 뉴스',     trendingTypes:['news'], searchQ:null },
-  movies:   { title:'🎬 영화',     trendingTypes:['movies'], searchQ:null },
+  home:     { title:'🔥 트렌딩',       trendingTypes:['','music','gaming','news','movies'], searchFallback:null },
+  shorts:   { title:'📱 Shorts',        trendingTypes:null, searchFallback:'shorts' },
+  trending: { title:'🔥 트렌딩 전체',  trendingTypes:['','music','gaming','news','movies'], searchFallback:null },
+  live:     { title:'🔴 라이브',        trendingTypes:null, searchFallback:'한국 live 생방송' },
+  music:    { title:'🎵 음악',          trendingTypes:['music'],  searchFallback:'한국 음악 뮤직비디오' },
+  gaming:   { title:'🎮 게임',          trendingTypes:['gaming'], searchFallback:'한국 게임 유튜브' },
+  news:     { title:'📰 뉴스',          trendingTypes:['news'],   searchFallback:'한국 뉴스 오늘' },
+  movies:   { title:'🎬 영화',          trendingTypes:['movies'], searchFallback:'영화 예고편 리뷰' },
 };
 
 function setActiveTab(cat) {
@@ -906,28 +907,44 @@ async function loadCategory(cat) {
     let all = [];
     const seen = new Set();
 
-    if (cfg.searchQ) {
-      // 검색 기반 카테고리 (Shorts, 라이브 등)
-      const d = await api(`/search?q=${encodeURIComponent(cfg.searchQ)}&type=video&sort_by=relevance`, true);
+    // ── 1. 순수 검색 카테고리 (Shorts, 라이브 등)
+    if (!cfg.trendingTypes && cfg.searchFallback) {
+      const d = await api(`/search?q=${encodeURIComponent(cfg.searchFallback)}&type=video&sort_by=relevance`, true);
       if (Array.isArray(d)) {
         for (const v of d) if (v.videoId && !seen.has(v.videoId)) { seen.add(v.videoId); all.push(v); }
       }
-    } else if (cfg.trendingTypes) {
-      // 트렌딩 카테고리 병렬 로드
+    }
+    // ── 2. trending?type= 시도 후, 빈 배열이면 searchFallback으로 폴백
+    else if (cfg.trendingTypes) {
       const results = await Promise.allSettled(
-        cfg.trendingTypes.map(t => api(`/trending?region=KR${t?`&type=${t}`:''}`, true))
+        cfg.trendingTypes.map(t => api(`/trending?region=KR${t ? `&type=${t}` : ''}`, true))
       );
       for (const r of results) {
-        if (r.status==='fulfilled' && Array.isArray(r.value)) {
+        if (r.status === 'fulfilled' && Array.isArray(r.value)) {
           for (const v of r.value) {
             if (v.videoId && !seen.has(v.videoId)) { seen.add(v.videoId); all.push(v); }
           }
+        }
+      }
+
+      // trending이 빈 배열을 반환했고 검색 폴백이 있으면 → search로 대체
+      if (!all.length && cfg.searchFallback) {
+        console.warn(`[InvTube] trending/${cat} 빈 응답 → search 폴백: "${cfg.searchFallback}"`);
+        const d = await api(`/search?q=${encodeURIComponent(cfg.searchFallback)}&type=video&sort_by=relevance`, true);
+        if (Array.isArray(d)) {
+          for (const v of d) if (v.videoId && !seen.has(v.videoId)) { seen.add(v.videoId); all.push(v); }
+        }
+        // 검색 폴백도 성공하면 무한스크롤 활성화
+        if (all.length) {
+          _q = cfg.searchFallback; _sPage = 1; _sLoading = false; _sDone = false; _sMode = 'video';
         }
       }
     }
 
     if (!all.length) throw new Error('빈 응답');
     wrap.innerHTML = `<div class="grid">${all.map(cardHTML).join('')}</div>`;
+    // 검색 폴백으로 로드된 경우 무한스크롤 sentinel 추가
+    if (_q) _addSentinel();
   } catch(e) {
     console.error(`[InvTube] loadCategory(${cat}) 실패:`, e);
     wrap.innerHTML = errHTML(
