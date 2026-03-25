@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>InvTube</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f0f0f;--surface:#1a1a1a;--border:#2a2a2a;--accent:#ff4444;--text:#e8e8e8;--muted:#888}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+.header{position:sticky;top:0;z-index:100;background:rgba(15,15,15,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:12px 16px}
+.header-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:14px}
+.logo{font-size:1.2rem;font-weight:700;color:var(--accent);cursor:pointer;white-space:nowrap;flex-shrink:0}
+.search-form{display:flex;flex:1;max-width:580px}
+.search-input{flex:1;padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-right:none;border-radius:20px 0 0 20px;color:var(--text);font-size:.95rem;outline:none}
+.search-input:focus{border-color:var(--accent)}
+.search-btn{padding:8px 16px;background:var(--accent);border:none;border-radius:0 20px 20px 0;color:#fff;cursor:pointer;font-size:1rem}
+.container{max-width:1280px;margin:0 auto;padding:0 16px}
+.section-title{font-size:1.1rem;font-weight:700;padding:16px 0 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;padding:8px 0 24px}
+.card{background:var(--surface);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.card:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.5)}
+.thumb-wrap{position:relative;aspect-ratio:16/9;overflow:hidden;background:#111}
+.thumb-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.duration{position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,.85);color:#fff;font-size:.72rem;padding:2px 5px;border-radius:3px}
+.card-info{padding:10px 12px 12px}
+.card-title{font-size:.87rem;font-weight:600;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-meta{font-size:.77rem;color:var(--muted);margin-top:4px}
+.watch-layout{display:grid;grid-template-columns:1fr 360px;gap:20px;padding:20px 0}
+@media(max-width:900px){.watch-layout{grid-template-columns:1fr}}
+.video-player{width:100%;aspect-ratio:16/9;background:#000;border-radius:8px;display:block;border:none}
+.video-title{font-size:1.1rem;font-weight:700;margin:12px 0 4px}
+.video-meta{font-size:.83rem;color:var(--muted);margin-bottom:10px}
+.video-desc{font-size:.83rem;color:var(--muted);line-height:1.6;max-height:80px;overflow:hidden;background:var(--surface);padding:10px;border-radius:6px;cursor:pointer;transition:max-height .3s}
+.video-desc.open{max-height:600px}
+.related-title{font-size:1rem;font-weight:600;margin-bottom:12px}
+.related-list{display:flex;flex-direction:column;gap:8px}
+.rel-card{display:flex;gap:10px;cursor:pointer;padding:7px;border-radius:8px;transition:background .15s}
+.rel-card:hover{background:var(--surface)}
+.rel-thumb{width:136px;flex-shrink:0;border-radius:5px;overflow:hidden;aspect-ratio:16/9;background:#111}
+.rel-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.rel-info{flex:1;min-width:0}
+.rel-title{font-size:.8rem;font-weight:600;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rel-meta{font-size:.73rem;color:var(--muted);margin-top:3px}
+.spinner{text-align:center;padding:60px;color:var(--muted)}
+.error-msg{text-align:center;padding:40px;color:var(--accent)}
+#home-view,#watch-view{display:none}
+#home-view.active,#watch-view.active{display:block}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <span class="logo" id="logoBtn">▶ InvTube</span>
+    <form class="search-form" id="searchForm">
+      <input class="search-input" id="searchInput" placeholder="영상 검색..."/>
+      <button class="search-btn" type="submit">🔍</button>
+    </form>
+  </div>
+</header>
+
+<main class="container">
+  <div id="home-view" class="active">
+    <p class="section-title" id="homeTitle">🔥 트렌딩</p>
+    <div class="grid" id="videoGrid"></div>
+  </div>
+  <div id="watch-view">
+    <div class="watch-layout">
+      <div id="playerBox"></div>
+      <aside>
+        <p class="related-title">관련 영상</p>
+        <div class="related-list" id="relatedList"></div>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<script>
+// ★ 핵심: 직접 API 대신 /api/proxy 경유 → CORS 없음
+async function api(path) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const r = await fetch(`/api/proxy?path=${encodeURIComponent(path)}`, { signal: ctrl.signal });
+    if (!r.ok) throw new Error(`${r.status}`);
+    return r.json();
+  } finally { clearTimeout(tid); }
+}
+
+function fmtDur(s){if(!s)return'';const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60;return h?`${h}:${p2(m)}:${p2(sc)}`:`${m}:${p2(sc)}`}
+function p2(n){return String(n).padStart(2,'0')}
+function fmtV(n){if(!n)return'';if(n>=1e6)return`${(n/1e6).toFixed(1)}M회`;if(n>=1e3)return`${(n/1e3).toFixed(0)}K회`;return`${n}회`}
+function fmtD(u){return u?new Date(u*1000).toLocaleDateString('ko-KR'):''}
+function thumb(id){return`https://inv.nadeko.net/vi/${id}/mqdefault.jpg`}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function pickStream(arr=[]){for(const q of['720p','480p','360p','240p']){const s=arr.find(f=>f.quality===q);if(s)return s.url;}return arr[0]?.url??null}
+
+function cardHTML(v){
+  return`<div class="card" onclick="goWatch('${v.videoId}')">
+    <div class="thumb-wrap">
+      <img src="${thumb(v.videoId)}" alt="" loading="lazy" onerror="this.style.opacity=0"/>
+      ${v.lengthSeconds?`<span class="duration">${fmtDur(v.lengthSeconds)}</span>`:''}
+    </div>
+    <div class="card-info">
+      <p class="card-title">${esc(v.title)}</p>
+      <p class="card-meta">${esc(v.author||'')} · ${fmtV(v.viewCount)}</p>
+    </div>
+  </div>`;
+}
+
+async function loadTrending(){
+  const g=document.getElementById('videoGrid');
+  g.innerHTML=`<p class="spinner" style="grid-column:1/-1">불러오는 중...</p>`;
+  try{
+    const d=await api('/trending?region=KR');
+    g.innerHTML=d.map(cardHTML).join('');
+  }catch(e){
+    g.innerHTML=`<p class="error-msg" style="grid-column:1/-1">트렌딩 로드 실패 (${e.message})</p>`;
+  }
+}
+
+async function doSearch(q){
+  document.getElementById('homeTitle').textContent=`"${q}" 검색 결과`;
+  showHome();
+  const g=document.getElementById('videoGrid');
+  g.innerHTML=`<p class="spinner" style="grid-column:1/-1">검색 중...</p>`;
+  try{
+    const d=await api(`/search?q=${encodeURIComponent(q)}&type=video&sort_by=relevance`);
+    g.innerHTML=d.map(cardHTML).join('');
+  }catch(e){
+    g.innerHTML=`<p class="error-msg" style="grid-column:1/-1">검색 실패 (${e.message})</p>`;
+  }
+}
+
+async function goWatch(id){
+  history.pushState({},'',`?v=${id}`);
+  showWatch();
+  document.getElementById('playerBox').innerHTML=`<p class="spinner">로딩 중...</p>`;
+  document.getElementById('relatedList').innerHTML='';
+  window.scrollTo(0,0);
+  try{
+    const v=await api(`/videos/${id}`);
+    const streamUrl=pickStream(v.formatStreams??[]);
+    let player=streamUrl
+      ?`<video class="video-player" controls autoplay preload="auto" playsinline src="${streamUrl}"></video>`
+      :`<iframe class="video-player" src="https://inv.nadeko.net/embed/${id}?autoplay=1" allowfullscreen allow="autoplay;fullscreen"></iframe>`;
+
+    document.getElementById('playerBox').innerHTML=`
+      ${player}
+      <h1 class="video-title">${esc(v.title)}</h1>
+      <p class="video-meta">${esc(v.author||'')} · ${fmtV(v.viewCount)} · ${fmtD(v.published)}</p>
+      <div class="video-desc" onclick="this.classList.toggle('open')">
+        ${esc(v.description||'설명 없음').replace(/\n/g,'<br>')}
+        <br><span style="color:var(--accent);font-size:.78rem">▼ 더 보기</span>
+      </div>`;
+
+    const rel=v.recommendedVideos??[];
+    document.getElementById('relatedList').innerHTML=rel.slice(0,15).map(r=>`
+      <div class="rel-card" onclick="goWatch('${r.videoId}')">
+        <div class="rel-thumb"><img src="${thumb(r.videoId)}" alt="" loading="lazy" onerror="this.style.opacity=0"/></div>
+        <div class="rel-info">
+          <p class="rel-title">${esc(r.title)}</p>
+          <p class="rel-meta">${esc(r.author||'')} · ${fmtDur(r.lengthSeconds)}</p>
+        </div>
+      </div>`).join('');
+  }catch(e){
+    document.getElementById('playerBox').innerHTML=`<p class="error-msg">영상 로드 실패 (${e.message})</p>`;
+  }
+}
+
+function showHome(){document.getElementById('home-view').classList.add('active');document.getElementById('watch-view').classList.remove('active')}
+function showWatch(){document.getElementById('home-view').classList.remove('active');document.getElementById('watch-view').classList.add('active')}
+
+document.getElementById('logoBtn').onclick=()=>{
+  document.getElementById('homeTitle').textContent='🔥 트렌딩';
+  document.getElementById('searchInput').value='';
+  history.pushState({},'','/');
+  loadTrending(); showHome();
+};
+document.getElementById('searchForm').onsubmit=(e)=>{
+  e.preventDefault();
+  const q=document.getElementById('searchInput').value.trim();
+  if(q)doSearch(q);
+};
+window.addEventListener('popstate',()=>{
+  const p=new URLSearchParams(location.search);
+  const v=p.get('v');
+  if(v)goWatch(v);else{loadTrending();showHome();}
+});
+
+// 초기 라우팅
+const initV=new URLSearchParams(location.search).get('v');
+if(initV)goWatch(initV);else{loadTrending();showHome();}
+</script>
+</body>
+</html>
