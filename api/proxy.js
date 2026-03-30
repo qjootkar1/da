@@ -1,18 +1,13 @@
-// ════════════════════════════════════════════════════════
-//  InvTube — Invidious 프록시  (api/proxy.js)
-//  - ?path=/videos/ID  → Invidious API JSON 반환
-//  - ?stream=ID        → 영상 스트림 URL 추출 후 JSON 반환
-//  - 상위 5개 병렬 시도 → 나머지 순차 fallback
-// ════════════════════════════════════════════════════════
+// InvTube proxy — Vercel 10초 제한 안에 맞게 최적화
+// 클라이언트 직접 CORS 호출 실패 시에만 여기로 옴
 
 const DEFAULT_INSTANCES = [
-  'https://iv.datura.network',
   'https://invidious.privacyredirect.com',
+  'https://inv.nadeko.net',
+  'https://yewtu.be',
   'https://invidious.perennialte.ch',
   'https://inv.tux.pizza',
   'https://invidious.io.lol',
-  'https://inv.nadeko.net',
-  'https://yewtu.be',
   'https://invidious.nerdvpn.de',
   'https://invidious.privacydev.net',
   'https://invidious.kavin.rocks',
@@ -20,6 +15,7 @@ const DEFAULT_INSTANCES = [
   'https://invidious.lunar.icu',
   'https://invidious.fdn.fr',
   'https://invidious.flokinet.to',
+  'https://iv.datura.network',
 ];
 
 function shuffle(arr) {
@@ -31,55 +27,41 @@ function shuffle(arr) {
   return a;
 }
 
-function getInstances(preferred) {
-  let list = shuffle(DEFAULT_INSTANCES);
-  if (preferred && DEFAULT_INSTANCES.includes(preferred)) {
-    list = [preferred, ...list.filter(i => i !== preferred)];
-  }
-  return list;
-}
-
 async function tryFetch(base, path) {
   const url = `${base}/api/v1${path}`;
-  const response = await fetch(url, {
+  const r = await fetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'User-Agent': 'Mozilla/5.0 (compatible; InvTube/1.0)',
       'Accept': 'application/json',
-      'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.8',
     },
-    signal: AbortSignal.timeout(8000),
+    signal: AbortSignal.timeout(4000), // 4초로 줄임
   });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const data = await response.json();
-  return { data, base };
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return { data: await r.json(), base };
 }
 
-async function fetchFromInstances(instances, path) {
-  const top5 = instances.slice(0, 5);
-  const rest  = instances.slice(5);
+async function fetchAny(instances, path) {
+  // 3개 병렬 (4s × 3 = 최대 4s, Vercel 10s 안에 충분)
+  const top = instances.slice(0, 3);
+  const rest = instances.slice(3);
   try {
-    return await Promise.any(top5.map(b => tryFetch(b, path)));
+    return await Promise.any(top.map(b => tryFetch(b, path)));
   } catch (_) {}
-  for (const base of rest) {
+  // 순차 fallback (각 4s, 최대 2개만 더 시도)
+  for (const base of rest.slice(0, 2)) {
     try { return await tryFetch(base, path); }
-    catch (e) { console.warn(`[proxy] ❌ ${base}: ${e.message}`); }
+    catch (e) { console.warn(`❌ ${base}: ${e.message}`); }
   }
   return null;
 }
 
-function pickStream(formatStreams, adaptiveFormats) {
+function pickStream(formatStreams) {
   const muxed = (formatStreams || [])
-    .filter(f => f.url && f.type && f.type.startsWith('video/mp4'))
+    .filter(f => f.url && f.type && (f.type.includes('mp4') || f.type.includes('webm')))
     .sort((a, b) => (parseInt(b.resolution) || 0) - (parseInt(a.resolution) || 0));
-  if (muxed.length > 0) {
-    const prefer = muxed.find(f => parseInt(f.resolution) <= 720) || muxed[0];
-    return { url: prefer.url, label: prefer.qualityLabel || prefer.resolution || 'mp4' };
-  }
-  const webm = (formatStreams || [])
-    .filter(f => f.url && f.type && f.type.startsWith('video/webm'))
-    .sort((a, b) => (parseInt(b.resolution) || 0) - (parseInt(a.resolution) || 0));
-  if (webm.length > 0) return { url: webm[0].url, label: webm[0].qualityLabel || 'webm' };
-  return null;
+  if (!muxed.length) return null;
+  const prefer = muxed.find(f => parseInt(f.resolution) <= 720) || muxed[0];
+  return { url: prefer.url, label: prefer.qualityLabel || prefer.resolution || 'mp4', type: prefer.type };
 }
 
 export default async function handler(req, res) {
@@ -89,37 +71,38 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { path, stream, preferred } = req.query;
-  const instances = getInstances(preferred);
 
-  // ── 스트림 모드: ?stream=VIDEO_ID
+  let instances = shuffle(DEFAULT_INSTANCES);
+  if (preferred && DEFAULT_INSTANCES.includes(preferred)) {
+    instances = [preferred, ...instances.filter(i => i !== preferred)];
+  }
+
+  // 스트림 모드
   if (stream) {
-    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
-    const result = await fetchFromInstances(instances, `/videos/${stream}`);
-    if (!result) return res.status(502).json({ error: '스트림을 가져올 수 없습니다.' });
+    res.setHeader('Cache-Control', 's-maxage=300');
+    const result = await fetchAny(instances, `/videos/${stream}`);
+    if (!result) return res.status(502).json({ error: '스트림 없음' });
 
-    const picked = pickStream(result.data.formatStreams, result.data.adaptiveFormats);
-    if (!picked) return res.status(404).json({ error: '재생 가능한 스트림이 없습니다.' });
+    const picked = pickStream(result.data.formatStreams);
+    if (!picked) return res.status(404).json({ error: '재생 가능한 스트림 없음' });
 
     const allStreams = (result.data.formatStreams || [])
-      .filter(f => f.url && f.type && (f.type.startsWith('video/mp4') || f.type.startsWith('video/webm')))
+      .filter(f => f.url && f.type && (f.type.includes('mp4') || f.type.includes('webm')))
       .map(f => ({ url: f.url, label: f.qualityLabel || f.resolution || 'mp4', type: f.type }));
 
     return res.status(200).json({
-      url: picked.url,
-      label: picked.label,
-      instance: result.base,
-      title: result.data.title || '',
-      lengthSeconds: result.data.lengthSeconds || 0,
-      allStreams,
+      url: picked.url, label: picked.label,
+      instance: result.base, title: result.data.title || '',
+      lengthSeconds: result.data.lengthSeconds || 0, allStreams,
     });
   }
 
-  // ── 일반 API 프록시: ?path=/...
-  if (!path) return res.status(400).json({ error: 'path or stream required' });
+  // 일반 API
+  if (!path) return res.status(400).json({ error: 'path required' });
   res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
 
-  const result = await fetchFromInstances(instances, path);
-  if (!result) return res.status(502).json({ error: '모든 Invidious 인스턴스가 응답하지 않습니다.' });
+  const result = await fetchAny(instances, path);
+  if (!result) return res.status(502).json({ error: '모든 인스턴스 실패' });
 
   res.setHeader('X-Instance-Used', result.base);
   return res.status(200).json(result.data);
