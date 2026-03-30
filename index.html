@@ -677,41 +677,72 @@ function closeInstanceDropdown() {
 document.addEventListener('click', () => closeInstanceDropdown());
 
 /* ════════════════════════════════════════
-   2. API + LRU 캐시  (기존 구조 그대로, preferred 파라미터 추가)
+   2. API + LRU 캐시  — 직접 호출 우선, 프록시 fallback
 ════════════════════════════════════════ */
 const _cache = new Map();
+
+// 단일 인스턴스에 직접 CORS 요청
+async function directFetch(base, path) {
+  const r = await fetch(`${base}/api/v1${path}`, {
+    headers: { 'Accept': 'application/json' },
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
 
 async function api(path, noCache=false) {
   const cacheKey = path;
   if (!noCache && _cache.has(cacheKey)) return _cache.get(cacheKey);
 
-  const ctrl = new AbortController();
-  const tid = setTimeout(() => ctrl.abort(), 14000);
-  const preferred = encodeURIComponent(getPreferredInstance());
+  const liveInsts = INSTANCES.filter(u => !DEAD_INSTANCES.has(u));
+  // preferred 맨 앞으로
+  const ordered = [_activeInstance, ...liveInsts.filter(u => u !== _activeInstance)];
 
+  // 1단계: 상위 3개 직접 병렬 호출 (CORS)
+  let data = null;
   try {
-    const r = await fetch(
-      `/api/proxy?path=${encodeURIComponent(path)}&preferred=${preferred}`,
-      {signal: ctrl.signal}
-    );
-    if (!r.ok) throw new Error(r.status);
-
-    // 성공한 인스턴스를 헤더에서 읽어 저장
-    const usedInst = r.headers.get('X-Instance-Used');
-    if (usedInst && usedInst !== _activeInstance) {
-      console.log(`[InvTube] 자동 fallback → ${usedInst}`);
-      _activeInstance = usedInst;
-      try { localStorage.setItem(LS_INST_KEY, usedInst); } catch(_) {}
+    const result = await Promise.any(ordered.slice(0, 3).map(async base => {
+      const d = await directFetch(base, path);
+      return { d, base };
+    }));
+    data = result.d;
+    if (result.base !== _activeInstance) {
+      _activeInstance = result.base;
+      try { localStorage.setItem(LS_INST_KEY, result.base); } catch(_) {}
       renderInstanceUI();
     }
+  } catch (_) {}
 
-    const d = await r.json();
-    if (!noCache) {
-      _cache.set(cacheKey, d);
-      if (_cache.size > 100) _cache.delete(_cache.keys().next().value);
+  // 2단계: 직접 실패 → Vercel 프록시 fallback
+  if (!data) {
+    try {
+      const preferred = encodeURIComponent(_activeInstance);
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 12000);
+      const r = await fetch(
+        `/api/proxy?path=${encodeURIComponent(path)}&preferred=${preferred}`,
+        { signal: ctrl.signal }
+      );
+      clearTimeout(tid);
+      if (!r.ok) throw new Error(r.status);
+      const usedInst = r.headers.get('X-Instance-Used');
+      if (usedInst) {
+        _activeInstance = usedInst;
+        try { localStorage.setItem(LS_INST_KEY, usedInst); } catch(_) {}
+        renderInstanceUI();
+      }
+      data = await r.json();
+    } catch(e) {
+      throw new Error('API 실패: 직접 호출 + 프록시 모두 실패');
     }
-    return d;
-  } finally { clearTimeout(tid); }
+  }
+
+  if (!noCache && data) {
+    _cache.set(cacheKey, data);
+    if (_cache.size > 100) _cache.delete(_cache.keys().next().value);
+  }
+  return data;
 }
 
 async function oEmbed(id) {
